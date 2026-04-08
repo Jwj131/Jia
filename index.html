@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>谁是卧底 - 在线游戏</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+
+        /* 动态背景动画 */
+        .animated-bg {
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* 加载旋转动画 */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #8b5cf6;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 卡片翻转效果 */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+        .transform-style-3d {
+            transform-style: preserve-3d;
+        }
+        .backface-hidden {
+            backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+
+        /* 聊天框滚动条样式 */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* 打字机光标 */
+        .typing-cursor::after {
+            content: '|';
+            animation: blink 1s step-start infinite;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        /* 弹窗动画 */
+        .modal-enter {
+            animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes modalPop {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* 消息淡入 */
+        .animate-fade-in-up {
+            animation: fadeInUp 0.4s forwards;
+        }
+        @keyframes fadeInUp {
+            from { opacity:0; transform: translateY(10px); }
+            to { opacity:1; transform: translateY(0); }
+        }
+
+        /* ---------- 新增：对错特效 ---------- */
+        .correct-effect {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 8rem;
+            color: #10b981;
+            z-index: 9999;
+            animation: correctPop 1.2s ease-out forwards;
+        }
+        @keyframes correctPop {
+            0% { transform: translate(-50%, -50%) scale(0); opacity:1; }
+            60% { transform: translate(-50%, -50%) scale(1.2); }
+            100% { transform: translate(-50%, -50%) scale(0); opacity:0; }
+        }
+
+        .wrong-effect {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 8rem;
+            color: #ef4444;
+            z-index: 9999;
+            animation: wrongShake 1s ease-out forwards;
+        }
+        @keyframes wrongShake {
+            0%,100% { transform: translate(-50%, -50%) scale(1); opacity:1; }
+            25% { transform: translate(-55%, -50%) scale(1.1); }
+            50% { transform: translate(-50%, -50%) scale(0.9); }
+            75% { transform: translate(-45%, -50%) scale(1.1); }
+            100% { opacity:0; }
+        }
+
+        /* ---------- 胜利/失败全屏特效 ---------- */
+        .win-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(16, 185, 129, 0.2);
+            z-index: 9998;
+            animation: winFlash 1.5s ease-out forwards;
+            pointer-events: none;
+        }
+        @keyframes winFlash {
+            0% { opacity:0; }
+            30% { opacity:1; }
+            100% { opacity:0; }
+        }
+
+        .lose-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(239, 68, 68, 0.2);
+            z-index: 9998;
+            animation: loseShake 1s ease-out forwards;
+            pointer-events: none;
+        }
+        @keyframes loseShake {
+            0%,100% { opacity:0; transform: translateX(0); }
+            20% { opacity:1; transform: translateX(-10px); }
+            40% { transform: translateX(10px); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(5px); }
+        }
+
+        /* 烟花简单模拟 */
+        .fireworks {
+            position: fixed;
+            inset: 0;
+            z-index: 9997;
+            background: radial-gradient(circle at 50% 50%, gold, transparent 70%),
+                        radial-gradient(circle at 30% 30%, cyan, transparent 70%),
+                        radial-gradient(circle at 70% 70%, magenta, transparent 70%);
+            background-size: 200% 200%;
+            animation: fireworkAnim 2s forwards;
+            pointer-events: none;
+        }
+        @keyframes fireworkAnim {
+            0% { opacity:0; transform: scale(0.5); }
+            50% { opacity:1; transform: scale(1.2); }
+            100% { opacity:0; transform: scale(2); }
+        }
+    </style>
+</head>
+<body class="animated-bg h-screen w-full flex items-center justify-center overflow-hidden text-gray-80">
+
+    <!-- 主容器 -->
+    <div id="app-container" class="relative w-full max-w-md h-[85vh] bg-white/90 backdrop-blur-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-white/50 transition-all duration-500">
+        
+        <!-- 顶部装饰 + JWJ LOGO -->
+        <div class="relative w-full h-14 bg-white border-b border-gray-100 flex items-center px-5 z-30">
+            <!-- JWJ 主题LOGO -->
+            <div class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 tracking-wider">
+                JWJ • 谁是卧底
+            </div>
+            <div class="ml-auto">
+                <span class="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full">在线</span>
+            </div>
+        </div>
+
+        <!-- 1. 开始界面 (Start Screen) -->
+        <div id="screen-start" class="absolute inset-0 flex flex-col items-center justify-center p-8 z-20 bg-white/95 transition-opacity duration-500">
+            <div class="mb-8 text-center mt-6">
+                <h1 class="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 mb-2 tracking-tight">谁是卧底</h1>
+                <p class="text-gray-500 text-sm tracking-widest uppercase">Undercover Game</p>
+            </div>
+            
+            <div class="w-full max-w-xs space-y-4">
+                <button onclick="startMatching()" class="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg transform transition hover:scale-105 active:scale-95 flex items-center justify-center gap-2 group">
+                    <span>开始匹配</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                </button>
+                <div class="flex justify-center gap-4 text-xs text-gray-400">
+                    <span>在线玩家: 1,204</span>
+                    <span>•</span>
+                    <span>房间: 89</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 匹配界面 (Matching Screen) -->
+        <div id="screen-matching" class="absolute inset-0 flex flex-col items-center justify-center p-8 z-30 bg-white/95 opacity-0 pointer-events-none transition-opacity duration-500">
+            <div class="loader mb-6"></div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">正在匹配玩家...</h2>
+            <p id="matching-status" class="text-gray-500 text-sm typing-cursor">寻找附近的房间</p>
+            
+            <div class="mt-12 w-full max-w-xs bg-gray-100 rounded-full h-2 overflow-hidden">
+                <div id="progress-bar" class="bg-purple-500 h-full w-0 transition-all duration-[3000ms] ease-out"></div>
+            </div>
+            <button onclick="cancelMatching()" class="mt-8 text-gray-400 hover:text-gray-600 text-sm underline">取消匹配</button>
+        </div>
+
+        <!-- 3. 游戏主界面 (Game Screen) -->
+        <div id="screen-game" class="absolute inset-0 flex flex-col z-10 opacity-0 pointer-events-none transition-opacity duration-500 bg-gray-50">
+            <!-- 头部 -->
+            <header class="bg-white px-6 py-4 shadow-sm flex justify-between items-center z-20">
+                <div class="flex items-center gap-2">
+                    <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded">第1轮</span>
+                    <h2 class="font-bold text-gray-800">游戏进行中</h2>
+                </div>
+                <button onclick="toggleHelp()" class="text-gray-400 hover:text-purple-600 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </button>
+            </header>
+
+            <!-- 身份信息卡片 (可翻转) -->
+            <div class="px-6 py-4 bg-white border-b border-gray-100">
+                <div class="perspective-1000 w-full h-32 cursor-pointer" onclick="flipCard()">
+                    <div id="identity-card-inner" class="relative w-full h-full text-center transition-transform duration-700 transform-style-3d shadow-md rounded-xl">
+                        <!-- 正面 (封面) -->
+                        <div class="absolute w-full h-full backface-hidden bg-gradient-to-br from-purple-600 to-indigo-700 rounded-xl flex flex-col items-center justify-center text-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                            <span class="font-bold tracking-wider">点击揭示身份</span>
+                            <span class="text-xs opacity-60 mt-1">(仅自己可见)</span>
+                        </div>
+                        <!-- 背面 (内容) -->
+                        <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-white border-2 border-purple-100 rounded-xl flex flex-col items-center justify-center p-4">
+                            <span class="text-xs text-gray-400 uppercase tracking-widest mb-1">你的词语</span>
+                            <span id="player-word" class="text-3xl font-bold text-purple-600">???</span>
+                            <span id="player-role" class="text-xs mt-2 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">平民</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-center text-xs text-gray-400 mt-2">点击卡片查看身份，记得保密！</p>
+            </div>
+
+            <!-- 聊天区域 -->
+            <div id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide bg-gray-50">
+                <!-- 系统消息 -->
+                <div class="flex justify-center">
+                    <span class="text-xs text-gray-400 bg-gray-200 px-2 py-1 rounded-full">游戏开始，请依次描述你的词语</span>
+                </div>
+            </div>
+
+            <!-- 底部输入/投票区 -->
+            <div class="p-4 bg-white border-t border-gray-200 z-20">
+                <!-- 输入模式 -->
+                <div id="input-area" class="flex gap-2">
+                    <input type="text" id="message-input" placeholder="描述你的词语..." class="flex-1 bg-gray-100 border-0 rounded-lg px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all outline-none text-sm" onkeypress="handleEnter(event)">
+                    <button onclick="sendMessage()" class="bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-lg transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- 投票模式 (默认隐藏) -->
+                <div id="vote-area" class="hidden">
+                    <p class="text-sm text-gray-600 mb-2 font-bold">请选择要淘汰的玩家：</p>
+                    <div id="vote-options" class="grid grid-cols-4 gap-2">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 帮助弹窗 -->
+        <div id="help-modal" class="absolute inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-6 backdrop-blur-sm" onclick="toggleHelp()">
+            <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl modal-enter" onclick="event.stopPropagation()">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-purple-700">游戏规则</h3>
+                    <button onclick="toggleHelp()" class="text-gray-400 hover:text-gray-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="space-y-3 text-sm text-gray-600 leading-relaxed">
+                    <p><strong class="text-purple-600">1.</strong> 在场所有人中只有1人拿到与其它人不同词语，可能为空白。</p>
+                    <p><strong class="text-purple-600">2.</strong> 每人描述词语，不暴露身份又给同伴暗示。</p>
+                    <p><strong class="text-purple-600">3.</strong> 每轮描述后投票选出怀疑卧底，最高票出局。</p>
+                    <p><strong class="text-purple-600">4.</strong> 卧底活到剩3人则卧底胜，否则平民胜。</p>
+                </div>
+                <button onclick="toggleHelp()" class="mt-6 w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium transition-colors">明白了</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 游戏数据
+        const players = [
+            { id: 1, name: "玩家1 (我)", avatar: "🤠", word: "空调", role: "civilian", isSelf: true },
+            { id: 2, name: "玩家2", avatar: "🤖", word: "风扇", role: "undercover", isSelf: false },
+            { id: 3, name: "玩家3", avatar: "👻", word: "空调", role: "civilian", isSelf: false },
+            { id: 4, name: "玩家4", avatar: "👽", word: "空调", role: "civilian", isSelf: false },
+            { id: 5, name: "玩家5", avatar: "🤡", word: "空调", role: "civilian", isSelf: false }
+        ];
+
+        const botMessages = [
+            { id: 2, text: "这是一个电器。" },
+            { id: 3, text: "夏天没有它我会死。" },
+            { id: 4, text: "可以调节温度。" },
+            { id: 5, text: "挂在墙上的。" },
+            { id: 2, text: "转动的时候有风。" }
+        ];
+
+        let gameState = 'start';
+        let currentBotMsgIndex = 0;
+
+        // 界面切换
+        function switchScreen(hideId, showId) {
+            const hideEl = document.getElementById(hideId);
+            const showEl = document.getElementById(showId);
+            hideEl.style.opacity = '0';
+            hideEl.style.pointerEvents = 'none';
+            setTimeout(() => {
+                showEl.style.opacity = '1';
+                showEl.style.pointerEvents = 'auto';
+            }, 500);
+        }
+
+        // 匹配
+        function startMatching() {
+            switchScreen('screen-start', 'screen-matching');
+            const bar = document.getElementById('progress-bar');
+            const status = document.getElementById('matching-status');
+            setTimeout(() => { bar.style.width = '40%'; status.innerText = "正在同步数据..."; }, 100);
+            setTimeout(() => { bar.style.width = '70%'; status.innerText = "分配身份词语..."; }, 1500);
+            setTimeout(() => { 
+                bar.style.width = '100%'; 
+                status.innerText = "准备就绪！"; 
+                setTimeout(initGame, 500);
+            }, 2800);
+        }
+
+        function cancelMatching() {
+            switchScreen('screen-matching', 'screen-start');
+            document.getElementById('progress-bar').style.width = '0';
+        }
+
+        // 初始化游戏
+        function initGame() {
+            switchScreen('screen-matching', 'screen-game');
+            gameState = 'playing';
+            const me = players.find(p => p.isSelf);
+            document.getElementById('player-word').innerText = me.word;
+            simulateChat();
+        }
+
+        // 模拟聊天
+        function simulateChat() {
+            if (currentBotMsgIndex < botMessages.length) {
+                const msgData = botMessages[currentBotMsgIndex];
+                const player = players.find(p => p.id === msgData.id);
+                addMessageToChat(player, msgData.text);
+                currentBotMsgIndex++;
+                setTimeout(simulateChat, Math.random() * 1500 + 1000);
+            } else {
+                setTimeout(startVoting, 2000);
+            }
+        }
+
+        function addMessageToChat(player, text) {
+            const chatContainer = document.getElementById('chat-container');
+            const isSelf = player.isSelf;
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `flex w-full ${isSelf ? 'justify-end' : 'justify-start'} animate-fade-in-up`;
+            const bubbleColor = isSelf ? 'bg-purple-600 text-white' : 'bg-white border border-gray-200 text-gray-800';
+            const avatar = isSelf ? '' : `<div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-lg mr-2">${player.avatar}</div>`;
+            const nameTag = isSelf ? '' : `<div class="text-xs text-gray-400 ml-10 mb-1">${player.name}</div>`;
+            msgDiv.innerHTML = `
+                <div class="flex flex-col max-w-[80%]">
+                    ${nameTag}
+                    <div class="flex items-end">
+                        ${avatar}
+                        <div class="${bubbleColor} px-4 py-2 rounded-2xl ${isSelf ? 'rounded-br-none' : 'rounded-bl-none'} shadow-sm text-sm break-words">
+                            ${text}
+                        </div>
+                    </div>
+                </div>
+            `;
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // 发送消息
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if (!text) return;
+            const me = players.find(p => p.isSelf);
+            addMessageToChat(me, text);
+            input.value = '';
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+
+        // 投票
+        function startVoting() {
+            gameState = 'voting';
+            document.getElementById('input-area').classList.add('hidden');
+            const voteArea = document.getElementById('vote-area');
+            voteArea.classList.remove('hidden');
+            const optionsContainer = document.getElementById('vote-options');
+            optionsContainer.innerHTML = '';
+            
+            players.forEach(p => {
+                if (!p.isSelf) {
+                    const btn = document.createElement('button');
+                    btn.className = "flex flex-col items-center p-2 rounded-lg hover:bg-purple-50 transition-colors group";
+                    btn.innerHTML = `
+                        <div class="w-12 h-12 rounded-full bg-white border-2 border-gray-200 group-hover:border-purple-500 flex items-center justify-center text-2xl shadow-sm mb-1 transition-all">
+                            ${p.avatar}
+                        </div>
+                        <span class="text-xs text-gray-600 group-hover:text-purple-700">${p.name}</span>
+                    `;
+                    btn.onclick = () => submitVote(p);
+                    optionsContainer.appendChild(btn);
+                }
+            });
+
+            const chatContainer = document.getElementById('chat-container');
+            const sysMsg = document.createElement('div');
+            sysMsg.className = "flex justify-center my-4";
+            sysMsg.innerHTML = `<span class="text-xs font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-full">投票阶段：请指认卧底</span>`;
+            chatContainer.appendChild(sysMsg);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // ---------- 投票结果 + 对错/胜负特效 ----------
+        function submitVote(targetPlayer) {
+            const voteArea = document.getElementById('vote-area');
+            voteArea.innerHTML = `<div class="text-center py-2 text-purple-600 font-bold">等待其他玩家投票...</div>`;
+
+            setTimeout(() => {
+                const isUndercover = targetPlayer.role === 'undercover';
+                
+                if (isUndercover) {
+                    // 正确特效
+                    showEffect('correct');
+                    // 胜利特效
+                    setTimeout(() => showEffect('win'), 600);
+                    setTimeout(() => alert('✅ 投票成功！你找出了卧底，平民胜利！'), 1200);
+                } else {
+                    // 错误特效
+                    showEffect('wrong');
+                    // 失败特效
+                    setTimeout(() => showEffect('lose'), 600);
+                    setTimeout(() => alert('❌ 投错了！卧底还在场，卧底胜利！'), 1200);
+                }
+
+                setTimeout(() => location.reload(), 2500);
+            }, 2000);
+        }
+
+        // 统一显示特效
+        function showEffect(type) {
+            let el;
+            if (type === 'correct') {
+                el = document.createElement('div');
+                el.className = 'correct-effect';
+                el.innerText = '✓';
+            } else if (type === 'wrong') {
+                el = document.createElement('div');
+                el.className = 'wrong-effect';
+                el.innerText = '✗';
+            } else if (type === 'win') {
+                const fire = document.createElement('div');
+                fire.className = 'fireworks';
+                document.body.appendChild(fire);
+                setTimeout(() => fire.remove(), 2000);
+
+                const overlay = document.createElement('div');
+                overlay.className = 'win-overlay';
+                document.body.appendChild(overlay);
+                setTimeout(() => overlay.remove(), 1500);
+                return;
+            } else if (type === 'lose') {
+                const overlay = document.createElement('div');
+                overlay.className = 'lose-overlay';
+                document.body.appendChild(overlay);
+                setTimeout(() => overlay.remove(), 1000);
+                return;
+            }
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1200);
+        }
+
+        // 翻转卡片
+        function flipCard() {
+            const inner = document.getElementById('identity-card-inner');
+            inner.style.transform = inner.style.transform === 'rotateY(180deg)' ? 'rotateY(0deg)' : 'rotateY(180deg)';
+        }
+
+        // 帮助
+        function toggleHelp() {
+            const modal = document.getElementById('help-modal');
+            modal.classList.toggle('hidden');
+        }
+    </script>
+</body>
+</html>
